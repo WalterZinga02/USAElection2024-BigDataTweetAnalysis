@@ -1,0 +1,13 @@
+# Dataset locali e file generati
+RawData/
+*.csv
+
+# Ambienti virtuali e cache Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Configurazioni degli editor
+.vscode/
+.idea/

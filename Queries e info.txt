@@ -1,0 +1,33 @@
+1 Distribuzione geografica dei tweet
+Analizza la distribuzione spaziale dei tweet nei diversi swing states, individuando le città con il maggior volume di discussioni politiche.
+
+2 Evoluzione temporale
+Studia l'andamento temporale della conversazione politica, evidenziando variazioni del volume di tweet durante la campagna elettorale.
+
+3 Top hashtag (opzionale)	
+Estrae e classifica gli hashtag più utilizzati, identificando gli argomenti e gli slogan più diffusi nella discussione online.
+
+4 Parole più frequenti	
+Analizza il contenuto testuale dei tweet individuando le parole più ricorrenti dopo la rimozione delle stopwords e la pulizia del testo.
+
+5 Confronto Trump/Harris tramite keyword	
+Confronta la frequenza con cui i due candidati vengono menzionati nei diversi swing states utilizzando un insieme di keyword rappresentative.
+
+6 Co-occorrenza delle parole	
+Costruisce una rete di co-occorrenza tra le parole chiave per individuare i concetti che compaiono più frequentemente insieme all'interno dei tweet.
+
+7 Analisi degli utenti	(da rivedere)
+Analizza le caratteristiche e l'attività degli utenti, utilizzando informazioni come biografia e frequenza di pubblicazione per descrivere la popolazione coinvolta nella discussione.
+
+8 K-Means – Clustering automatico dei tweet	
+Applica l'algoritmo K-Means per raggruppare automaticamente i tweet in cluster tematici sulla base delle feature selezionate (testo, hashtag, descrizione utente, stato, ecc.).
+
+9 SVM – Classificazione dell'orientamento politico	
+Addestra un classificatore SVM su un dataset etichettato automaticamente tramite LLM per predire l'orientamento politico dei tweet (es. PRO_TRUMP, PRO_HARRIS, NEUTRAL).
+
+features for ML queries: tweet text, hashtag, user description, state
+
+116.370 total swing states tweets
+
+
+
