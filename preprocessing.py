@@ -9,7 +9,8 @@ from ftfy import fix_text
 # CONFIGURAZIONE
 # ==========================
 
-INPUT_OUTPUT_FOLDER = "RawData"
+INPUT_FOLDER = "RawData"
+OUTPUT_FOLDER = "CleanData"
 
 TEXT_COLUMN = "text"
 USERNAME_COLUMN = "username"
@@ -135,6 +136,11 @@ def process_csv(input_path: str):
     df[TEXT_COLUMN] = cleaned_tweets[0]
     df["hashtags"] = cleaned_tweets[1]
 
+    # Posiziona gli hashtag estratti immediatamente dopo la colonna del testo.
+    hashtags = df.pop("hashtags")
+    text_position = df.columns.get_loc(TEXT_COLUMN)
+    df.insert(text_position + 1, "hashtags", hashtags)
+
     if USERNAME_COLUMN in df.columns:
         df[USERNAME_COLUMN] = df[USERNAME_COLUMN].apply(clean_username)
 
@@ -148,7 +154,7 @@ def process_csv(input_path: str):
     name, ext = os.path.splitext(filename)
 
     output_path = os.path.join(
-        INPUT_OUTPUT_FOLDER,
+        OUTPUT_FOLDER,
         f"{name}{OUTPUT_SUFFIX}{ext}"
     )
 
@@ -158,16 +164,12 @@ def process_csv(input_path: str):
 
 
 def main():
-    csv_files = glob.glob(os.path.join(INPUT_OUTPUT_FOLDER, "*.csv"))
-
-    csv_files = [
-        f for f in csv_files
-        if not os.path.basename(f).replace(".csv", "").endswith(OUTPUT_SUFFIX)
-    ]
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    csv_files = glob.glob(os.path.join(INPUT_FOLDER, "*.csv"))
 
     if not csv_files:
         raise FileNotFoundError(
-            f"Nessun CSV da processare trovato in {INPUT_OUTPUT_FOLDER}"
+            f"Nessun CSV da processare trovato in {INPUT_FOLDER}"
         )
 
     for csv_file in csv_files:
