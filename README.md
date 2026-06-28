@@ -31,9 +31,13 @@ streamlit run streamlit_app.py
 La dashboard legge i CSV nella cartella `output`, mostra grafici interattivi e usa mappe colorate per le distribuzioni geografiche per stato.
 
 Nel pannello laterale puoi anche avviare direttamente le query Spark: scegli input
-e cartella output, poi premi il bottone della singola query da eseguire. Il log
-viene mostrato nell'interfaccia e, a fine esecuzione, i grafici vengono ricaricati
-dai nuovi CSV.
+e premi il bottone della singola query da eseguire. Il log viene mostrato
+nell'interfaccia e, a fine esecuzione, i grafici vengono ricaricati dai nuovi CSV
+nella cartella `output`.
+
+Per la query 9 puoi selezionare dalla dashboard quali feature testuali usare
+nella SVM tra testo del tweet, hashtag e descrizione utente. La feature `state`
+non e' selezionabile per evitare bias geografico nel classificatore.
 
 ## Etichettatura con Ollama
 

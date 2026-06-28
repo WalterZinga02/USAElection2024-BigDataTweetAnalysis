@@ -41,15 +41,21 @@ QUERY_FILES = {
 }
 
 QUERY_OPTIONS = {
-    1: "1 - Distribuzione geografica",
-    2: "2 - Evoluzione temporale",
-    3: "3 - Top hashtag",
-    4: "4 - Parole frequenti",
-    5: "5 - Confronto Trump/Harris",
-    6: "6 - Co-occorrenza parole",
-    7: "7 - Polarizzazione territoriale",
-    8: "8 - K-Means clustering",
-    9: "9 - SVM classificazione",
+    1: "Query 1 - Distribuzione geografica",
+    2: "Query 2 - Evoluzione temporale",
+    3: "Query 3 - Top hashtag",
+    4: "Query 4 - Parole frequenti",
+    5: "Query 5 - Keyword Trump/Harris",
+    6: "Query 6 - Co-occorrenza parole",
+    7: "Query 7 - Polarizzazione territoriale",
+    8: "Query 8 - K-Means clustering",
+    9: "Query 9 - SVM classificazione",
+}
+
+SVM_FEATURE_OPTIONS = {
+    "text": "Testo tweet",
+    "hashtags": "Hashtag",
+    "description": "Descrizione utente",
 }
 
 NOISY_SPARK_LOG_PARTS = (
@@ -76,6 +82,13 @@ ORIENTATION_COLORS = {
     "PRO_TRUMP": "#dc2626",
     "PRO_HARRIS": "#2563eb",
     "BALANCED": "#16a34a",
+}
+SVM_METRIC_COLORS = {
+    "area_under_roc": "#93c5fd",
+    "accuracy": "#60a5fa",
+    "f1": "#38bdf8",
+    "weighted_precision": "#22d3ee",
+    "weighted_recall": "#2dd4bf",
 }
 
 
@@ -172,6 +185,7 @@ def run_spark_analysis(
     skip_ml: bool,
     multiline_csv: bool,
     show_full_log: bool,
+    svm_features: list[str],
     log_placeholder,
 ) -> int:
     command = [
@@ -188,6 +202,8 @@ def run_spark_analysis(
         command.append("--skip-ml")
     if multiline_csv:
         command.append("--multiline-csv")
+    if 9 in queries:
+        command.extend(["--svm-features", *svm_features])
 
     env = os.environ.copy()
     env["PYSPARK_PYTHON"] = sys.executable
@@ -249,6 +265,7 @@ def state_choropleth(
     title: str,
     color_scale: str = "Blues",
     hover_cols: list[str] | None = None,
+    range_color: tuple[float, float] | None = None,
 ) -> go.Figure:
     state_df = df.copy()
     if "state_code" not in state_df.columns and "state" in state_df.columns:
@@ -263,6 +280,7 @@ def state_choropleth(
         hover_name="state",
         hover_data=hover_cols or [],
         color_continuous_scale=color_scale,
+        range_color=range_color,
         labels={value_col: title},
     )
     fig.update_geos(
@@ -409,10 +427,11 @@ def temporal_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
     st.dataframe(temporal.sort_values(["date", "state"]), width="stretch", hide_index=True)
 
 
-def content_tab(data: dict[str, pd.DataFrame]) -> None:
+def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
     hashtags = data["hashtags"]
     words = data["words"]
     cooccurrence = data["cooccurrence"]
+    keywords = filter_states(data["keywords"], states)
 
     left, right = st.columns(2)
     with left:
@@ -427,6 +446,23 @@ def content_tab(data: dict[str, pd.DataFrame]) -> None:
         else:
             top_words = words.head(st.slider("Parole da mostrare", 5, 40, 20))
             st.plotly_chart(horizontal_bar(top_words, "count", "word", "Parole piu frequenti"), width="stretch")
+
+    if keywords.empty:
+        show_missing("il confronto keyword Trump/Harris")
+    else:
+        mention_cols = ["trump_mentions", "harris_mentions"]
+        mentions = keywords.groupby("state", as_index=False)[mention_cols].sum()
+        fig = px.bar(
+            mentions,
+            x="state",
+            y=mention_cols,
+            barmode="group",
+            title="Query 5 - Menzioni keyword Trump/Harris per stato",
+            color_discrete_map={"trump_mentions": "#dc2626", "harris_mentions": "#2563eb"},
+        )
+        fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=380, legend_title_text="")
+        st.plotly_chart(fig, width="stretch")
+        st.dataframe(keywords, width="stretch", hide_index=True)
 
     if cooccurrence.empty:
         show_missing("le co-occorrenze")
@@ -566,7 +602,7 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
                 y="value",
                 title="Metriche SVM",
                 color="metric",
-                color_discrete_sequence=COLOR_SEQUENCE,
+                color_discrete_map=SVM_METRIC_COLORS,
             )
             fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=420, showlegend=False)
             fig.update_yaxes(range=[0, max(1.0, score_metrics["value"].max())])
@@ -590,20 +626,24 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Dati")
-        output_dir_text = st.text_input("Cartella output", value=str(DEFAULT_OUTPUT_DIR))
-        output_dir = Path(output_dir_text).expanduser()
+        output_dir = DEFAULT_OUTPUT_DIR
 
         with st.expander("Esegui analisi Spark", expanded=False):
             input_path = st.text_input("Input CSV", value=DEFAULT_INPUT_PATH)
             show_full_log = st.checkbox("Mostra log tecnico", value=False)
-            st.caption("Esegui una query alla volta e mostra il log in diretta.")
-            button_columns = st.columns(3)
+            svm_features = st.multiselect(
+                "Feature SVM",
+                options=list(SVM_FEATURE_OPTIONS),
+                default=list(SVM_FEATURE_OPTIONS),
+                format_func=lambda feature: SVM_FEATURE_OPTIONS[feature],
+                help="Valgono solo per Query 9. Lo stato non e' selezionabile per evitare bias geografico.",
+            )
             query_to_run = None
-            for index, (query_number, query_label) in enumerate(QUERY_OPTIONS.items()):
-                if button_columns[index % 3].button(
-                    f"Query {query_number}",
+            for query_number, query_label in QUERY_OPTIONS.items():
+                if st.button(
+                    query_label,
                     key=f"run_query_{query_number}",
-                    help=query_label,
+                    disabled=query_number == 9 and not svm_features,
                     width="stretch",
                 ):
                     query_to_run = query_number
@@ -618,6 +658,7 @@ def main() -> None:
                         skip_ml=False,
                         multiline_csv=False,
                         show_full_log=show_full_log,
+                        svm_features=svm_features,
                         log_placeholder=log_placeholder,
                     )
                 if return_code == 0:
@@ -641,7 +682,7 @@ def main() -> None:
         selected_states = st.multiselect("Swing states", all_states, default=all_states)
 
     if not found:
-        st.warning("Non ho trovato CSV nella cartella output indicata. Esegui prima `python spark_analysis.py`.")
+        st.warning("Non ho trovato CSV in `output`. Esegui prima una query Spark dalla sidebar.")
         return
 
     tabs = st.tabs(["Overview", "Geografia", "Tempo", "Contenuti", "Polarizzazione", "Modelli"])
@@ -652,7 +693,7 @@ def main() -> None:
     with tabs[2]:
         temporal_tab(data, selected_states)
     with tabs[3]:
-        content_tab(data)
+        content_tab(data, selected_states)
     with tabs[4]:
         polarization_tab(data, selected_states)
     with tabs[5]:

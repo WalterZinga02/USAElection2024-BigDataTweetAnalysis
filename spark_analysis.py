@@ -442,11 +442,14 @@ def kmeans_clustering(df, output_dir: str, k: int) -> None:
 # Query 9 - SVM per classificazione dell'orientamento politico.
 # Addestra una Linear SVM binaria sui tweet etichettati dall'LLM, escludendo i
 # neutrali/ambigui, e salva metriche e matrice di confusione.
-def svm_classification(df, output_dir: str) -> None:
+def svm_classification(df, output_dir: str, feature_columns: list[str]) -> None:
+    if not feature_columns:
+        raise ValueError("La SVM richiede almeno una feature testuale.")
+
     labeled = (
         df.filter(F.col("binary_label").isin(0, 1))
-        .select(F.col("binary_label").cast("double").alias("label"), "text", "hashtags", "description", "state")
-        .withColumn("features_text", F.concat_ws(" ", "text", "hashtags", "description", "state"))
+        .select(F.col("binary_label").cast("double").alias("label"), *feature_columns)
+        .withColumn("features_text", F.concat_ws(" ", *feature_columns))
     )
 
     train_df, test_df = labeled.randomSplit([0.8, 0.2], seed=42)
@@ -520,6 +523,13 @@ def parse_args() -> argparse.Namespace:
         help="Soglia minima di utenti classificati per la polarizzazione cittadina.",
     )
     parser.add_argument("--k", type=int, default=4, help="Numero di cluster K-Means.")
+    parser.add_argument(
+        "--svm-features",
+        nargs="+",
+        choices=["text", "hashtags", "description"],
+        default=["text", "hashtags", "description"],
+        help="Feature testuali per la SVM. Lo stato e' escluso per evitare bias geografico.",
+    )
     parser.add_argument("--skip-ml", action="store_true", help="Esegue solo le analisi descrittive.")
     return parser.parse_args()
 
@@ -575,7 +585,7 @@ def main() -> None:
         print("Query 8 saltata perche' e' attivo --skip-ml.")
 
     if not args.skip_ml and 9 in selected_queries:
-        run_query(9, "SVM", lambda: svm_classification(tweets, args.output))
+        run_query(9, "SVM", lambda: svm_classification(tweets, args.output, args.svm_features))
     elif args.skip_ml and 9 in selected_queries:
         print("Query 9 saltata perche' e' attivo --skip-ml.")
 
