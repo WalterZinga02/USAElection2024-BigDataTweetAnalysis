@@ -16,8 +16,8 @@ Confronta la frequenza con cui i due candidati vengono menzionati nei diversi sw
 6 Co-occorrenza delle parole	
 Costruisce una rete di co-occorrenza tra le parole chiave per individuare i concetti che compaiono più frequentemente insieme all'interno dei tweet.
 
-7 Analisi degli utenti	(da rivedere)
-Analizza le caratteristiche e l'attività degli utenti, utilizzando informazioni come biografia e frequenza di pubblicazione per descrivere la popolazione coinvolta nella discussione.
+7 Polarizzazione territoriale degli utenti politici
+alcola, per ogni swing state e per le città con un numero sufficiente di utenti classificati, la distribuzione degli utenti pro-Trump e pro-Harris sulla base dell’orientamento prevalente dei loro tweet. L’obiettivo è individuare le aree in cui la popolazione attiva nella conversazione risulta più equilibrata o più polarizzata verso uno specifico candidato.
 
 8 K-Means – Clustering automatico dei tweet	
 Applica l'algoritmo K-Means per raggruppare automaticamente i tweet in cluster tematici sulla base delle feature selezionate (testo, hashtag, descrizione utente, stato, ecc.).

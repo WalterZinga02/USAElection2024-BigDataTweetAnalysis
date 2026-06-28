@@ -1,5 +1,6 @@
 # Dataset locali e file generati
 RawData/
+output/
 *.csv
 
 # Ambienti virtuali e cache Python
