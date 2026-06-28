@@ -8,7 +8,7 @@ Script Python per la pulizia e il preprocessing di dataset di tweet relativi agl
 2. Installa le dipendenze:
 
    ```powershell
-   pip install pandas ftfy
+   pip install pandas ftfy streamlit plotly
    ```
 
 3. Inserisci i file CSV originali nella cartella `RawData`.
@@ -19,6 +19,21 @@ Script Python per la pulizia e il preprocessing di dataset di tweet relativi agl
    ```
 
 I file puliti vengono creati nella cartella `CleanData` con il suffisso `_cleaned`.
+
+## Dashboard Streamlit
+
+Dopo aver generato i risultati con `spark_analysis.py`, avvia l'interfaccia grafica:
+
+```powershell
+streamlit run streamlit_app.py
+```
+
+La dashboard legge i CSV nella cartella `output`, mostra grafici interattivi e usa mappe colorate per le distribuzioni geografiche per stato.
+
+Nel pannello laterale puoi anche avviare direttamente le query Spark: scegli input
+e cartella output, poi premi il bottone della singola query da eseguire. Il log
+viene mostrato nell'interfaccia e, a fine esecuzione, i grafici vengono ricaricati
+dai nuovi CSV.
 
 ## Etichettatura con Ollama
 

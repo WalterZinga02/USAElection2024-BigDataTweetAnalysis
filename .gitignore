@@ -2,6 +2,8 @@
 RawData/
 output/
 *.csv
+*.log
+*.err
 
 # Ambienti virtuali e cache Python
 .venv/

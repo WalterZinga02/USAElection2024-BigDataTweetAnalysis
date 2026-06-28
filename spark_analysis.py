@@ -3,6 +3,7 @@ import csv
 import glob
 import os
 import shutil
+import sys
 
 from pyspark.ml import Pipeline
 from pyspark.ml.classification import LinearSVC
@@ -515,7 +516,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--min-city-users",
         type=int,
-        default=20,
+        default=1,
         help="Soglia minima di utenti classificati per la polarizzazione cittadina.",
     )
     parser.add_argument("--k", type=int, default=4, help="Numero di cluster K-Means.")
@@ -525,14 +526,17 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
+    os.environ.setdefault("PYSPARK_DRIVER_PYTHON", sys.executable)
 
     print("[spark] Avvio sessione Spark...", flush=True)
     spark = (
         SparkSession.builder.appName("SwingStatesTweetsAnalysis")
         .config("spark.sql.shuffle.partitions", "32")
+        .config("spark.ui.showConsoleProgress", "false")
         .getOrCreate()
     )
-    spark.sparkContext.setLogLevel("WARN")
+    spark.sparkContext.setLogLevel("ERROR")
     print("[spark] Sessione Spark pronta", flush=True)
 
     selected_queries = set(args.queries)
