@@ -92,6 +92,10 @@ SVM_METRIC_COLORS = {
 }
 
 
+def title_with_query(query_number: int, title: str) -> str:
+    return f"{title} ({QUERY_OPTIONS[query_number]})"
+
+
 st.set_page_config(
     page_title="Swing States Tweet Dashboard",
     page_icon="",
@@ -266,6 +270,7 @@ def state_choropleth(
     color_scale: str = "Blues",
     hover_cols: list[str] | None = None,
     range_color: tuple[float, float] | None = None,
+    colorbar_title: str | None = None,
 ) -> go.Figure:
     state_df = df.copy()
     if "state_code" not in state_df.columns and "state" in state_df.columns:
@@ -281,7 +286,7 @@ def state_choropleth(
         hover_data=hover_cols or [],
         color_continuous_scale=color_scale,
         range_color=range_color,
-        labels={value_col: title},
+        labels={value_col: colorbar_title or value_col},
     )
     fig.update_geos(
         visible=True,
@@ -298,7 +303,7 @@ def state_choropleth(
         margin=dict(l=0, r=0, t=46, b=0),
         height=440,
         geo=dict(projection_scale=0.92),
-        coloraxis_colorbar=dict(thickness=14),
+        coloraxis_colorbar=dict(thickness=14, title=colorbar_title or value_col),
     )
     return fig
 
@@ -382,7 +387,16 @@ def geography_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
 
     left, right = st.columns([1.1, 0.9])
     with left:
-        st.plotly_chart(state_choropleth(state_volume, metric, "Distribuzione geografica", "Blues", ["tweet_count", "unique_users"]), width="stretch")
+        st.plotly_chart(
+            state_choropleth(
+                state_volume,
+                metric,
+                title_with_query(1, "Distribuzione geografica"),
+                "Blues",
+                ["tweet_count", "unique_users"],
+            ),
+            width="stretch",
+        )
     with right:
         fig = px.treemap(
             geography,
@@ -390,7 +404,7 @@ def geography_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             values=metric,
             color="state",
             color_discrete_sequence=COLOR_SEQUENCE,
-            title="Peso relativo di stati e citta",
+            title=title_with_query(1, "Peso relativo di stati e citta"),
         )
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=440)
         st.plotly_chart(fig, width="stretch")
@@ -398,7 +412,7 @@ def geography_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
     top_n = st.slider("Numero citta nel ranking", 5, 30, 15)
     rank = geography.sort_values(metric, ascending=False).head(top_n).copy()
     rank["area"] = rank["city"] + ", " + rank["state"]
-    st.plotly_chart(horizontal_bar(rank, metric, "area", "Ranking territoriale", "state"), width="stretch")
+    st.plotly_chart(horizontal_bar(rank, metric, "area", title_with_query(1, "Ranking territoriale"), "state"), width="stretch")
     st.dataframe(geography, width="stretch", hide_index=True)
 
 
@@ -409,7 +423,7 @@ def temporal_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
         return
 
     daily_state = temporal.groupby(["date", "state"], as_index=False)["tweet_count"].sum()
-    fig = px.line(daily_state, x="date", y="tweet_count", color="state", title="Volume giornaliero per stato", markers=False)
+    fig = px.line(daily_state, x="date", y="tweet_count", color="state", title=title_with_query(2, "Volume giornaliero per stato"), markers=False)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=430)
     st.plotly_chart(fig, width="stretch")
 
@@ -419,7 +433,7 @@ def temporal_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
         daily_sentiment,
         x="date",
         y=sentiment_cols,
-        title="Composizione politica giornaliera",
+        title=title_with_query(2, "Composizione politica giornaliera"),
         color_discrete_map={"pro_trump": "#dc2626", "pro_harris": "#2563eb", "neutral_or_unclear": "#64748b"},
     )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=430, legend_title_text="")
@@ -439,13 +453,13 @@ def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             show_missing("i top hashtag")
         else:
             top_hashtags = hashtags.head(st.slider("Hashtag da mostrare", 5, 40, 20))
-            st.plotly_chart(horizontal_bar(top_hashtags, "count", "hashtag", "Hashtag piu frequenti"), width="stretch")
+            st.plotly_chart(horizontal_bar(top_hashtags, "count", "hashtag", title_with_query(3, "Hashtag piu frequenti")), width="stretch")
     with right:
         if words.empty:
             show_missing("le parole frequenti")
         else:
             top_words = words.head(st.slider("Parole da mostrare", 5, 40, 20))
-            st.plotly_chart(horizontal_bar(top_words, "count", "word", "Parole piu frequenti"), width="stretch")
+            st.plotly_chart(horizontal_bar(top_words, "count", "word", title_with_query(4, "Parole piu frequenti")), width="stretch")
 
     if keywords.empty:
         show_missing("il confronto keyword Trump/Harris")
@@ -457,7 +471,7 @@ def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             x="state",
             y=mention_cols,
             barmode="group",
-            title="Query 5 - Menzioni keyword Trump/Harris per stato",
+            title=title_with_query(5, "Menzioni keyword Trump/Harris per stato"),
             color_discrete_map={"trump_mentions": "#dc2626", "harris_mentions": "#2563eb"},
         )
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=380, legend_title_text="")
@@ -476,7 +490,7 @@ def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
         size="count",
         color="count",
         color_continuous_scale="Teal",
-        title="Coppie di parole che appaiono insieme",
+        title=title_with_query(6, "Coppie di parole che appaiono insieme"),
         hover_data=["count"],
     )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=520)
@@ -510,9 +524,10 @@ def polarization_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             state_choropleth(
                 state_polarization,
                 "user_polarization_score",
-                "Polarizzazione utenti per stato",
+                title_with_query(7, "Polarizzazione utenti per stato"),
                 "Reds",
                 ["classified_users", "pro_trump_users", "pro_harris_users"],
+                colorbar_title="Indice",
             ),
             width="stretch",
         )
@@ -528,7 +543,7 @@ def polarization_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             x="state",
             y="utenti",
             color="orientamento",
-            title="Composizione utenti classificati",
+            title=title_with_query(7, "Composizione utenti classificati"),
             color_discrete_map={"pro_trump_users": "#dc2626", "pro_harris_users": "#2563eb", "balanced_users": "#16a34a"},
         )
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=440, legend_title_text="")
@@ -544,7 +559,7 @@ def polarization_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
         orientation="h",
         color="dominant_user_orientation",
         color_discrete_map=ORIENTATION_COLORS,
-        title="Citta piu polarizzate",
+        title=title_with_query(7, "Citta piu polarizzate"),
         hover_data=["classified_users", "pro_trump_users", "pro_harris_users", "balanced_users"],
     )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=620, legend_title_text="")
@@ -578,7 +593,7 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
                 x="cluster",
                 y="quota",
                 color="orientamento",
-                title="Composizione percentuale dei cluster",
+                title=title_with_query(8, "Composizione percentuale dei cluster"),
                 hover_data={"tweet_count": True, "quota": ":.1%", "orientamento": False},
                 color_discrete_map={
                     "pro_trump_share": "#dc2626",
@@ -600,7 +615,7 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
                 score_metrics,
                 x="metric",
                 y="value",
-                title="Metriche SVM",
+                title=title_with_query(9, "Metriche SVM"),
                 color="metric",
                 color_discrete_map=SVM_METRIC_COLORS,
             )
@@ -611,11 +626,11 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
     if not cluster_terms.empty:
         selected_cluster = st.selectbox("Cluster", sorted(cluster_terms["cluster"].unique()))
         terms = cluster_terms[cluster_terms["cluster"] == selected_cluster].sort_values("rank")
-        st.plotly_chart(horizontal_bar(terms, "count", "word", f"Termini principali del cluster {selected_cluster}"), width="stretch")
+        st.plotly_chart(horizontal_bar(terms, "count", "word", title_with_query(8, f"Termini principali del cluster {selected_cluster}")), width="stretch")
 
     if not svm_confusion.empty:
         matrix = svm_confusion.pivot_table(index="label", columns="prediction", values="count", fill_value=0)
-        fig = px.imshow(matrix, text_auto=True, color_continuous_scale="Blues", title="Matrice di confusione SVM")
+        fig = px.imshow(matrix, text_auto=True, color_continuous_scale="Blues", title=title_with_query(9, "Matrice di confusione SVM"))
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=420)
         st.plotly_chart(fig, width="stretch")
 
@@ -630,14 +645,9 @@ def main() -> None:
 
         with st.expander("Esegui analisi Spark", expanded=False):
             input_path = st.text_input("Input CSV", value=DEFAULT_INPUT_PATH)
-            show_full_log = st.checkbox("Mostra log tecnico", value=False)
-            svm_features = st.multiselect(
-                "Feature SVM",
-                options=list(SVM_FEATURE_OPTIONS),
-                default=list(SVM_FEATURE_OPTIONS),
-                format_func=lambda feature: SVM_FEATURE_OPTIONS[feature],
-                help="Valgono solo per Query 9. Lo stato non e' selezionabile per evitare bias geografico.",
-            )
+            show_full_log = False
+            default_svm_features = list(SVM_FEATURE_OPTIONS)
+            svm_features = st.session_state.get("svm_features", default_svm_features)
             query_to_run = None
             for query_number, query_label in QUERY_OPTIONS.items():
                 if st.button(
@@ -647,6 +657,15 @@ def main() -> None:
                     width="stretch",
                 ):
                     query_to_run = query_number
+                if query_number == 9:
+                    svm_features = st.multiselect(
+                        "Feature SVM",
+                        options=default_svm_features,
+                        default=svm_features,
+                        format_func=lambda feature: SVM_FEATURE_OPTIONS[feature],
+                        help="Valgono solo per Query 9. Lo stato non e' selezionabile per evitare bias geografico.",
+                        key="svm_features",
+                    )
             log_placeholder = st.empty()
 
             if query_to_run is not None:

@@ -1,10 +1,10 @@
-1 Distribuzione geografica dei tweet
-Analizza la distribuzione spaziale dei tweet nei diversi swing states, individuando le città con il maggior volume di discussioni politiche.
+1 Distribuzione geografica dei tweet e degli utenti unici
+Analizza la distribuzione spaziale dei tweet e degli utenti unici nei diversi swing states, individuando le città con il maggior volume di discussioni politiche.
 
 2 Evoluzione temporale
-Studia l'andamento temporale della conversazione politica, evidenziando variazioni del volume di tweet durante la campagna elettorale.
+Studia l'andamento temporale della conversazione politica, evidenziando variazioni del volume di tweet durante la campagna elettorale. L'analisi viene condotta sia in maniera globale che per stato, che per orientamento politico. 
 
-3 Top hashtag (opzionale)	
+3 Top hashtag	
 Estrae e classifica gli hashtag più utilizzati, identificando gli argomenti e gli slogan più diffusi nella discussione online.
 
 4 Parole più frequenti	
@@ -17,7 +17,7 @@ Confronta la frequenza con cui i due candidati vengono menzionati nei diversi sw
 Costruisce una rete di co-occorrenza tra le parole chiave per individuare i concetti che compaiono più frequentemente insieme all'interno dei tweet.
 
 7 Polarizzazione territoriale degli utenti politici
-alcola, per ogni swing state e per le città con un numero sufficiente di utenti classificati, la distribuzione degli utenti pro-Trump e pro-Harris sulla base dell’orientamento prevalente dei loro tweet. L’obiettivo è individuare le aree in cui la popolazione attiva nella conversazione risulta più equilibrata o più polarizzata verso uno specifico candidato.
+calcola, per ogni swing state e per le città, la distribuzione degli utenti pro-Trump e pro-Harris sulla base dell’orientamento prevalente dei loro tweet. L’obiettivo è individuare le aree in cui la popolazione attiva nella conversazione risulta più equilibrata o più polarizzata verso uno specifico candidato.
 
 8 K-Means – Clustering automatico dei tweet	
 Applica l'algoritmo K-Means per raggruppare automaticamente i tweet in cluster tematici sulla base delle feature selezionate (testo, hashtag, descrizione utente, stato, ecc.).
