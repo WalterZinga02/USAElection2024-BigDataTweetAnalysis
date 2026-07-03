@@ -1,33 +1,146 @@
-1 Distribuzione geografica dei tweet e degli utenti unici
-Analizza la distribuzione spaziale dei tweet e degli utenti unici nei diversi swing states, individuando le città con il maggior volume di discussioni politiche.
+PROGETTO BIG DATA
 
-2 Evoluzione temporale
-Studia l'andamento temporale della conversazione politica, evidenziando variazioni del volume di tweet durante la campagna elettorale. L'analisi viene condotta sia in maniera globale che per stato, che per orientamento politico. 
+Analisi della polarizzazione politica su X durante le elezioni presidenziali statunitensi del 2024
 
-3 Top hashtag	
-Estrae e classifica gli hashtag più utilizzati, identificando gli argomenti e gli slogan più diffusi nella discussione online.
+Dataset
+- Piattaforma: X (Twitter)
+- Numero totale di tweet: 116.370
+- Area di interesse: Swing States degli Stati Uniti
 
-4 Parole più frequenti	
-Analizza il contenuto testuale dei tweet individuando le parole più ricorrenti dopo la rimozione delle stopwords e la pulizia del testo.
+-----------------------------------------------------------------------
 
-5 Confronto Trump/Harris tramite keyword	
-Confronta la frequenza con cui i due candidati vengono menzionati nei diversi swing states utilizzando un insieme di keyword rappresentative.
+1. PREPROCESSING
 
-6 Co-occorrenza delle parole	
-Costruisce una rete di co-occorrenza tra le parole chiave per individuare i concetti che compaiono più frequentemente insieme all'interno dei tweet.
+La prima fase del progetto consiste nella pulizia e normalizzazione dei dati testuali presenti nel dataset.
 
-7 Polarizzazione territoriale degli utenti politici
-calcola, per ogni swing state e per le città, la distribuzione degli utenti pro-Trump e pro-Harris sulla base dell’orientamento prevalente dei loro tweet. L’obiettivo è individuare le aree in cui la popolazione attiva nella conversazione risulta più equilibrata o più polarizzata verso uno specifico candidato.
+In particolare vengono preprocessati:
+- testo dei tweet;
+- descrizione degli utenti.
 
-8 K-Means – Clustering automatico dei tweet	
-Applica l'algoritmo K-Means per raggruppare automaticamente i tweet in cluster tematici sulla base delle feature selezionate (testo, hashtag, descrizione utente, stato, ecc.).
+L'obiettivo è rimuovere gli artefatti introdotti durante l'estrazione dei dati dalla piattaforma X, normalizzare la punteggiatura, eliminare caratteri speciali, URL ed elementi non informativi, così da ottenere un dataset pulito e pronto per le successive analisi.
 
-9 SVM – Classificazione dell'orientamento politico	
-Addestra un classificatore SVM su un dataset etichettato automaticamente tramite LLM per predire l'orientamento politico dei tweet (es. PRO_TRUMP, PRO_HARRIS, NEUTRAL).
+-----------------------------------------------------------------------
 
-features for ML queries: tweet text, hashtag, user description, state
+2. DISTRIBUZIONE GEOGRAFICA DEI TWEET E DEGLI UTENTI
 
-116.370 total swing states tweets
+Questa analisi studia la distribuzione spaziale:
+- del numero totale di tweet;
+- del numero di utenti unici.
 
+L'analisi viene effettuata sia a livello di Swing State sia a livello di città, con l'obiettivo di individuare le aree geografiche che hanno generato il maggior volume di discussioni politiche.
 
+-----------------------------------------------------------------------
 
+3. EVOLUZIONE TEMPORALE
+
+Viene analizzato l'andamento temporale della conversazione politica durante la campagna elettorale.
+
+L'analisi è svolta:
+- sull'intero dataset;
+- per ciascuno Swing State;
+- separando i tweet pro-Trump e pro-Harris.
+
+Lo scopo è individuare eventuali picchi di attività e comprendere come il dibattito si sia evoluto nel tempo.
+
+-----------------------------------------------------------------------
+
+4. TOP HASHTAG
+
+Vengono estratti e ordinati gli hashtag più utilizzati all'interno del dataset.
+
+Questa analisi permette di individuare:
+- gli argomenti maggiormente discussi;
+- gli slogan politici più utilizzati;
+- i principali temi della campagna elettorale.
+
+-----------------------------------------------------------------------
+
+5. PAROLE PIÙ FREQUENTI
+
+Dopo la rimozione delle stopwords e la pulizia del testo, vengono calcolate le parole con frequenza maggiore.
+
+L'obiettivo è evidenziare il vocabolario predominante nella discussione politica online.
+
+-----------------------------------------------------------------------
+
+6. CONFRONTO TRUMP-HARRIS TRAMITE KEYWORD
+
+Attraverso un insieme di keyword rappresentative associate ai due candidati viene confrontata la frequenza con cui Donald Trump e Kamala Harris vengono citati nei diversi Swing States.
+
+L'obiettivo è evidenziare eventuali differenze territoriali nella visibilità dei due candidati.
+
+-----------------------------------------------------------------------
+
+7. RETE DI CO-OCCORRENZA DELLE PAROLE
+
+Viene costruita una rete di co-occorrenza collegando tra loro le parole che compaiono frequentemente nello stesso tweet.
+
+L'analisi consente di individuare:
+- concetti strettamente correlati;
+- associazioni semantiche;
+- temi ricorrenti nella conversazione politica.
+
+-----------------------------------------------------------------------
+
+8. POLARIZZAZIONE TERRITORIALE DEGLI UTENTI
+
+Ad ogni utente viene assegnato un orientamento politico sulla base dell'orientamento prevalente dei tweet pubblicati.
+
+Successivamente viene calcolata, per ogni Swing State e per ogni città:
+- la percentuale di utenti pro-Trump;
+- la percentuale di utenti pro-Harris.
+
+Lo scopo è individuare le aree geografiche maggiormente polarizzate oppure caratterizzate da un equilibrio tra i due schieramenti.
+
+-----------------------------------------------------------------------
+
+9. K-MEANS - CLUSTERING AUTOMATICO DEI TWEET
+
+L'algoritmo K-Means viene utilizzato per raggruppare automaticamente i tweet in cluster tematici.
+
+Il clustering sfrutta un insieme di feature quali:
+- testo del tweet;
+- hashtag;
+- descrizione dell'utente;
+- informazioni geografiche.
+
+L'obiettivo è identificare automaticamente i principali argomenti di discussione senza utilizzare etichette predefinite.
+
+-----------------------------------------------------------------------
+
+10. SVM - CLASSIFICAZIONE DELL'ORIENTAMENTO POLITICO
+
+Viene addestrato un classificatore Support Vector Machine (SVM) per predire l'orientamento politico dei tweet.
+
+Feature utilizzate:
+- testo del tweet;
+- hashtag;
+- descrizione dell'utente.
+
+Output del classificatore:
+- PRO_TRUMP (1)
+- PRO_HARRIS (0)
+
+-----------------------------------------------------------------------
+
+LABELING AUTOMATICO DEL DATASET
+
+Poiché il dataset originale non contiene informazioni sull'orientamento politico dei tweet, è stata introdotta una fase preliminare di labeling automatico mediante il Large Language Model Gemma3-27b.
+
+Per ogni tweet il modello locale riceve in input:
+- il testo del tweet;
+- gli hashtag associati;
+- un prompt progettato per classificare l'orientamento politico.
+
+L'LLM assegna:
+- 1 → Tweet PRO_TRUMP
+- 0 → Tweet PRO_HARRIS
+
+Nel caso in cui il tweet:
+- sia neutrale;
+- contenga informazioni insufficienti;
+- oppure non esprima chiaramente un orientamento politico,
+
+il modello non assegna alcuna etichetta (caso di fallback) e il tweet viene escluso dal training supervisionato.
+
+Questo approccio consente di costruire automaticamente un dataset etichettato di elevata qualità evitando una lunga fase di annotazione manuale.
