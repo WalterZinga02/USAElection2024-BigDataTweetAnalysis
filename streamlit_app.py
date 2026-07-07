@@ -186,9 +186,6 @@ def run_spark_analysis(
     input_path: str,
     output_dir: Path,
     queries: list[int],
-    skip_ml: bool,
-    multiline_csv: bool,
-    show_full_log: bool,
     svm_features: list[str],
     log_placeholder,
 ) -> int:
@@ -202,10 +199,6 @@ def run_spark_analysis(
         "--queries",
         *[str(query) for query in queries],
     ]
-    if skip_ml:
-        command.append("--skip-ml")
-    if multiline_csv:
-        command.append("--multiline-csv")
     if 9 in queries:
         command.extend(["--svm-features", *svm_features])
 
@@ -235,7 +228,7 @@ def run_spark_analysis(
     assert process.stdout is not None
     for line in process.stdout:
         clean_line = line.rstrip()
-        if not show_full_log and is_noisy_spark_log(clean_line):
+        if is_noisy_spark_log(clean_line):
             hidden_lines += 1
             continue
         lines.append(clean_line)
@@ -645,7 +638,6 @@ def main() -> None:
 
         with st.expander("Esegui analisi Spark", expanded=False):
             input_path = st.text_input("Input CSV", value=DEFAULT_INPUT_PATH)
-            show_full_log = False
             default_svm_features = list(SVM_FEATURE_OPTIONS)
             svm_features = st.session_state.get("svm_features", default_svm_features)
             query_to_run = None
@@ -674,9 +666,6 @@ def main() -> None:
                         input_path=input_path,
                         output_dir=output_dir,
                         queries=[query_to_run],
-                        skip_ml=False,
-                        multiline_csv=False,
-                        show_full_log=show_full_log,
                         svm_features=svm_features,
                         log_placeholder=log_placeholder,
                     )

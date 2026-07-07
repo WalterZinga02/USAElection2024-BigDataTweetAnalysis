@@ -530,7 +530,6 @@ def parse_args() -> argparse.Namespace:
         default=["text", "hashtags", "description"],
         help="Feature testuali per la SVM. Lo stato e' escluso per evitare bias geografico.",
     )
-    parser.add_argument("--skip-ml", action="store_true", help="Esegue solo le analisi descrittive.")
     return parser.parse_args()
 
 
@@ -567,27 +566,13 @@ def main() -> None:
     if 5 in selected_queries:
         run_query(5, "Confronto keyword Trump/Harris", lambda: trump_harris_keyword_comparison(tweets, args.output))
     if 6 in selected_queries:
-        run_query(
-            6,
-            "Co-occorrenza parole",
-            lambda: word_cooccurrence(tokenized, args.output, args.cooccurrence_words, args.cooccurrence_pairs),
-        )
+        run_query(6, "Co-occorrenza parole", lambda: word_cooccurrence(tokenized, args.output, args.cooccurrence_words, args.cooccurrence_pairs))
     if 7 in selected_queries:
-        run_query(
-            7,
-            "Polarizzazione territoriale",
-            lambda: territorial_polarization(tweets, args.output, args.min_city_users),
-        )
-
-    if not args.skip_ml and 8 in selected_queries:
+        run_query(7, "Polarizzazione territoriale", lambda: territorial_polarization(tweets, args.output, args.min_city_users))
+    if 8 in selected_queries:
         run_query(8, "K-Means", lambda: kmeans_clustering(tweets, args.output, args.k))
-    elif args.skip_ml and 8 in selected_queries:
-        print("Query 8 saltata perche' e' attivo --skip-ml.")
-
-    if not args.skip_ml and 9 in selected_queries:
+    if 9 in selected_queries:
         run_query(9, "SVM", lambda: svm_classification(tweets, args.output, args.svm_features))
-    elif args.skip_ml and 9 in selected_queries:
-        print("Query 9 saltata perche' e' attivo --skip-ml.")
 
     print("[spark] Stop sessione Spark", flush=True)
     spark.stop()

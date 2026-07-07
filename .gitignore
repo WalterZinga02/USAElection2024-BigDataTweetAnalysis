@@ -1,6 +1,7 @@
 # Dataset locali e file generati
 RawData/
 output/
+relazione/
 *.csv
 *.log
 *.err
