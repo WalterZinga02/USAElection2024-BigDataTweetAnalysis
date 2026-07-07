@@ -31,13 +31,14 @@ QUERY_FILES = {
     "temporal": "query_02_temporal_evolution/temporal_evolution.csv",
     "hashtags": "query_03_top_hashtags/top_hashtags.csv",
     "words": "query_04_frequent_words/frequent_words.csv",
-    "keywords": "query_05_trump_harris_keyword_comparison/trump_harris_keyword_comparison.csv",
-    "cooccurrence": "query_06_word_cooccurrence/word_cooccurrence.csv",
-    "polarization": "query_07_territorial_polarization/territorial_polarization.csv",
-    "clusters": "query_08_kmeans_clustering/cluster_summary.csv",
-    "cluster_terms": "query_08_kmeans_clustering/top_terms.csv",
-    "svm_metrics": "query_09_svm_classification/metrics.csv",
-    "svm_confusion": "query_09_svm_classification/confusion_matrix.csv",
+    "distinctive_hashtags": "query_05_distinctive_hashtags/distinctive_hashtags.csv",
+    "keywords": "query_06_trump_harris_keyword_comparison/trump_harris_keyword_comparison.csv",
+    "cooccurrence": "query_07_word_cooccurrence/word_cooccurrence.csv",
+    "polarization": "query_08_territorial_polarization/territorial_polarization.csv",
+    "clusters": "query_09_kmeans_clustering/cluster_summary.csv",
+    "cluster_terms": "query_09_kmeans_clustering/top_terms.csv",
+    "svm_metrics": "query_10_svm_classification/metrics.csv",
+    "svm_confusion": "query_10_svm_classification/confusion_matrix.csv",
 }
 
 QUERY_OPTIONS = {
@@ -45,11 +46,12 @@ QUERY_OPTIONS = {
     2: "Query 2 - Evoluzione temporale",
     3: "Query 3 - Top hashtag",
     4: "Query 4 - Parole frequenti",
-    5: "Query 5 - Keyword Trump/Harris",
-    6: "Query 6 - Co-occorrenza parole",
-    7: "Query 7 - Polarizzazione territoriale",
-    8: "Query 8 - K-Means clustering",
-    9: "Query 9 - SVM classificazione",
+    5: "Query 5 - Hashtag distintivi",
+    6: "Query 6 - Keyword Trump/Harris",
+    7: "Query 7 - Co-occorrenza parole",
+    8: "Query 8 - Polarizzazione territoriale",
+    9: "Query 9 - K-Means clustering",
+    10: "Query 10 - SVM classificazione",
 }
 
 SVM_FEATURE_OPTIONS = {
@@ -199,7 +201,7 @@ def run_spark_analysis(
         "--queries",
         *[str(query) for query in queries],
     ]
-    if 9 in queries:
+    if 10 in queries:
         command.extend(["--svm-features", *svm_features])
 
     env = os.environ.copy()
@@ -437,6 +439,7 @@ def temporal_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
 def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
     hashtags = data["hashtags"]
     words = data["words"]
+    distinctive_hashtags = data["distinctive_hashtags"]
     cooccurrence = data["cooccurrence"]
     keywords = filter_states(data["keywords"], states)
 
@@ -454,6 +457,27 @@ def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             top_words = words.head(st.slider("Parole da mostrare", 5, 40, 20))
             st.plotly_chart(horizontal_bar(top_words, "count", "word", title_with_query(4, "Parole piu frequenti")), width="stretch")
 
+    if distinctive_hashtags.empty:
+        show_missing("gli hashtag distintivi per orientamento")
+    else:
+        top_trump = distinctive_hashtags[distinctive_hashtags["orientation_score"] > 0].nlargest(15, "orientation_score")
+        top_harris = distinctive_hashtags[distinctive_hashtags["orientation_score"] < 0].nsmallest(15, "orientation_score")
+        distinctive_plot = pd.concat([top_harris, top_trump], ignore_index=True)
+        fig = px.bar(
+            distinctive_plot.sort_values("orientation_score"),
+            x="orientation_score",
+            y="hashtag",
+            orientation="h",
+            color="dominant_orientation",
+            color_discrete_map={"PRO_TRUMP": "#dc2626", "PRO_HARRIS": "#2563eb", "BALANCED": "#16a34a"},
+            title=title_with_query(5, "Hashtag distintivi per orientamento politico"),
+            hover_data=["total_count", "pro_trump_count", "pro_harris_count", "pro_trump_share", "pro_harris_share"],
+        )
+        fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=620, legend_title_text="")
+        fig.update_xaxes(range=[-1, 1], title_text="Score orientamento (-1 Harris, +1 Trump)")
+        st.plotly_chart(fig, width="stretch")
+        st.dataframe(distinctive_hashtags, width="stretch", hide_index=True)
+
     if keywords.empty:
         show_missing("il confronto keyword Trump/Harris")
     else:
@@ -464,7 +488,7 @@ def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             x="state",
             y=mention_cols,
             barmode="group",
-            title=title_with_query(5, "Menzioni keyword Trump/Harris per stato"),
+            title=title_with_query(6, "Menzioni keyword Trump/Harris per stato"),
             color_discrete_map={"trump_mentions": "#dc2626", "harris_mentions": "#2563eb"},
         )
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=380, legend_title_text="")
@@ -483,7 +507,7 @@ def content_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
         size="count",
         color="count",
         color_continuous_scale="Teal",
-        title=title_with_query(6, "Coppie di parole che appaiono insieme"),
+        title=title_with_query(7, "Coppie di parole che appaiono insieme"),
         hover_data=["count"],
     )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=520)
@@ -517,7 +541,7 @@ def polarization_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             state_choropleth(
                 state_polarization,
                 "user_polarization_score",
-                title_with_query(7, "Polarizzazione utenti per stato"),
+                title_with_query(8, "Polarizzazione utenti per stato"),
                 "Reds",
                 ["classified_users", "pro_trump_users", "pro_harris_users"],
                 colorbar_title="Indice",
@@ -536,7 +560,7 @@ def polarization_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
             x="state",
             y="utenti",
             color="orientamento",
-            title=title_with_query(7, "Composizione utenti classificati"),
+            title=title_with_query(8, "Composizione utenti classificati"),
             color_discrete_map={"pro_trump_users": "#dc2626", "pro_harris_users": "#2563eb", "balanced_users": "#16a34a"},
         )
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=440, legend_title_text="")
@@ -552,7 +576,7 @@ def polarization_tab(data: dict[str, pd.DataFrame], states: list[str]) -> None:
         orientation="h",
         color="dominant_user_orientation",
         color_discrete_map=ORIENTATION_COLORS,
-        title=title_with_query(7, "Citta piu polarizzate"),
+        title=title_with_query(8, "Citta piu polarizzate"),
         hover_data=["classified_users", "pro_trump_users", "pro_harris_users", "balanced_users"],
     )
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=620, legend_title_text="")
@@ -586,7 +610,7 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
                 x="cluster",
                 y="quota",
                 color="orientamento",
-                title=title_with_query(8, "Composizione percentuale dei cluster"),
+                title=title_with_query(9, "Composizione percentuale dei cluster"),
                 hover_data={"tweet_count": True, "quota": ":.1%", "orientamento": False},
                 color_discrete_map={
                     "pro_trump_share": "#dc2626",
@@ -608,7 +632,7 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
                 score_metrics,
                 x="metric",
                 y="value",
-                title=title_with_query(9, "Metriche SVM"),
+                title=title_with_query(10, "Metriche SVM"),
                 color="metric",
                 color_discrete_map=SVM_METRIC_COLORS,
             )
@@ -619,11 +643,11 @@ def models_tab(data: dict[str, pd.DataFrame]) -> None:
     if not cluster_terms.empty:
         selected_cluster = st.selectbox("Cluster", sorted(cluster_terms["cluster"].unique()))
         terms = cluster_terms[cluster_terms["cluster"] == selected_cluster].sort_values("rank")
-        st.plotly_chart(horizontal_bar(terms, "count", "word", title_with_query(8, f"Termini principali del cluster {selected_cluster}")), width="stretch")
+        st.plotly_chart(horizontal_bar(terms, "count", "word", title_with_query(9, f"Termini principali del cluster {selected_cluster}")), width="stretch")
 
     if not svm_confusion.empty:
         matrix = svm_confusion.pivot_table(index="label", columns="prediction", values="count", fill_value=0)
-        fig = px.imshow(matrix, text_auto=True, color_continuous_scale="Blues", title=title_with_query(9, "Matrice di confusione SVM"))
+        fig = px.imshow(matrix, text_auto=True, color_continuous_scale="Blues", title=title_with_query(10, "Matrice di confusione SVM"))
         fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=420)
         st.plotly_chart(fig, width="stretch")
 
@@ -645,17 +669,17 @@ def main() -> None:
                 if st.button(
                     query_label,
                     key=f"run_query_{query_number}",
-                    disabled=query_number == 9 and not svm_features,
+                    disabled=query_number == 10 and not svm_features,
                     width="stretch",
                 ):
                     query_to_run = query_number
-                if query_number == 9:
+                if query_number == 10:
                     svm_features = st.multiselect(
                         "Feature SVM",
                         options=default_svm_features,
                         default=svm_features,
                         format_func=lambda feature: SVM_FEATURE_OPTIONS[feature],
-                        help="Valgono solo per Query 9. Lo stato non e' selezionabile per evitare bias geografico.",
+                        help="Valgono solo per Query 10. Lo stato non e' selezionabile per evitare bias geografico.",
                         key="svm_features",
                     )
             log_placeholder = st.empty()

@@ -4,12 +4,12 @@ Analisi della polarizzazione politica su X durante le elezioni presidenziali sta
 
 Dataset
 - Piattaforma: X (Twitter)
-- Numero totale di tweet: 116.370
+- Numero totale di tweet post-preprocessing: 115.460
 - Area di interesse: Swing States degli Stati Uniti
 
 -----------------------------------------------------------------------
 
-1. PREPROCESSING
+PREPROCESSING
 
 La prima fase del progetto consiste nella pulizia e normalizzazione dei dati testuali presenti nel dataset.
 
@@ -17,49 +17,67 @@ In particolare vengono preprocessati:
 - testo dei tweet;
 - descrizione degli utenti.
 
-L'obiettivo è rimuovere gli artefatti introdotti durante l'estrazione dei dati dalla piattaforma X, normalizzare la punteggiatura, eliminare caratteri speciali, URL ed elementi non informativi, così da ottenere un dataset pulito e pronto per le successive analisi.
+L'obiettivo e' rimuovere gli artefatti introdotti durante l'estrazione dei dati dalla piattaforma X, normalizzare la punteggiatura, eliminare caratteri speciali, URL ed elementi non informativi, cosi' da ottenere un dataset pulito e pronto per le successive analisi.
 
 -----------------------------------------------------------------------
 
-2. DISTRIBUZIONE GEOGRAFICA DEI TWEET E DEGLI UTENTI
+1. DISTRIBUZIONE GEOGRAFICA DEI TWEET E DEGLI UTENTI
 
 Questa analisi studia la distribuzione spaziale:
 - del numero totale di tweet;
 - del numero di utenti unici.
 
-L'analisi viene effettuata sia a livello di Swing State sia a livello di città, con l'obiettivo di individuare le aree geografiche che hanno generato il maggior volume di discussioni politiche.
+L'analisi viene effettuata sia a livello di Swing State sia a livello di citta', con l'obiettivo di individuare le aree geografiche che hanno generato il maggior volume di discussioni politiche.
 
 -----------------------------------------------------------------------
 
-3. EVOLUZIONE TEMPORALE
+2. EVOLUZIONE TEMPORALE
 
 Viene analizzato l'andamento temporale della conversazione politica durante la campagna elettorale.
 
-L'analisi è svolta:
+L'analisi e' svolta:
 - sull'intero dataset;
 - per ciascuno Swing State;
-- separando i tweet pro-Trump e pro-Harris.
+- separando i tweet pro-Trump, pro-Harris e neutrali/ambigui.
 
-Lo scopo è individuare eventuali picchi di attività e comprendere come il dibattito si sia evoluto nel tempo.
+Lo scopo e' individuare eventuali picchi di attivita' e comprendere come il dibattito si sia evoluto nel tempo.
 
 -----------------------------------------------------------------------
 
-4. TOP HASHTAG
+3. TOP HASHTAG
 
-Vengono estratti e ordinati gli hashtag più utilizzati all'interno del dataset.
+Vengono estratti e ordinati gli hashtag piu' utilizzati all'interno del dataset.
 
 Questa analisi permette di individuare:
 - gli argomenti maggiormente discussi;
-- gli slogan politici più utilizzati;
+- gli slogan politici piu' utilizzati;
 - i principali temi della campagna elettorale.
 
 -----------------------------------------------------------------------
 
-5. PAROLE PIÙ FREQUENTI
+4. PAROLE PIU' FREQUENTI
 
 Dopo la rimozione delle stopwords e la pulizia del testo, vengono calcolate le parole con frequenza maggiore.
 
-L'obiettivo è evidenziare il vocabolario predominante nella discussione politica online.
+L'obiettivo e' evidenziare il vocabolario predominante nella discussione politica online.
+
+-----------------------------------------------------------------------
+
+5. HASHTAG DISTINTIVI PER ORIENTAMENTO POLITICO
+
+Vengono individuati gli hashtag piu' caratteristici dei tweet pro-Trump e pro-Harris.
+
+Per ogni hashtag vengono calcolati:
+- numero totale di occorrenze;
+- occorrenze nei tweet pro-Trump;
+- occorrenze nei tweet pro-Harris;
+- quota pro-Trump;
+- quota pro-Harris;
+- orientation score compreso tra -1 e +1.
+
+Lo score positivo indica hashtag piu' associati ai tweet pro-Trump, mentre lo score negativo indica hashtag piu' associati ai tweet pro-Harris. Viene applicata una soglia minima di frequenza per evitare che hashtag molto rari risultino artificialmente distintivi.
+
+L'obiettivo e' individuare slogan, campagne e frame comunicativi che distinguono linguisticamente i due schieramenti.
 
 -----------------------------------------------------------------------
 
@@ -67,7 +85,7 @@ L'obiettivo è evidenziare il vocabolario predominante nella discussione politic
 
 Attraverso un insieme di keyword rappresentative associate ai due candidati viene confrontata la frequenza con cui Donald Trump e Kamala Harris vengono citati nei diversi Swing States.
 
-L'obiettivo è evidenziare eventuali differenze territoriali nella visibilità dei due candidati.
+L'obiettivo e' evidenziare eventuali differenze territoriali nella visibilita' dei due candidati.
 
 -----------------------------------------------------------------------
 
@@ -86,11 +104,13 @@ L'analisi consente di individuare:
 
 Ad ogni utente viene assegnato un orientamento politico sulla base dell'orientamento prevalente dei tweet pubblicati.
 
-Successivamente viene calcolata, per ogni Swing State e per ogni città:
+Successivamente viene calcolata, per ogni Swing State e per ogni citta':
 - la percentuale di utenti pro-Trump;
-- la percentuale di utenti pro-Harris.
+- la percentuale di utenti pro-Harris;
+- la percentuale di utenti bilanciati;
+- uno score di polarizzazione territoriale.
 
-Lo scopo è individuare le aree geografiche maggiormente polarizzate oppure caratterizzate da un equilibrio tra i due schieramenti.
+Lo scopo e' individuare le aree geografiche maggiormente polarizzate oppure caratterizzate da un equilibrio tra i due schieramenti.
 
 -----------------------------------------------------------------------
 
@@ -98,13 +118,13 @@ Lo scopo è individuare le aree geografiche maggiormente polarizzate oppure cara
 
 L'algoritmo K-Means viene utilizzato per raggruppare automaticamente i tweet in cluster tematici.
 
-Il clustering sfrutta un insieme di feature quali:
+Il clustering sfrutta feature testuali ottenute da:
 - testo del tweet;
-- hashtag;
-- descrizione dell'utente;
-- informazioni geografiche.
+- hashtag.
 
-L'obiettivo è identificare automaticamente i principali argomenti di discussione senza utilizzare etichette predefinite.
+La pipeline usa tokenizzazione, rimozione delle stopwords, CountVectorizer, IDF, normalizzazione e K-Means.
+
+L'obiettivo e' identificare automaticamente i principali argomenti di discussione senza utilizzare etichette predefinite.
 
 -----------------------------------------------------------------------
 
@@ -112,7 +132,7 @@ L'obiettivo è identificare automaticamente i principali argomenti di discussion
 
 Viene addestrato un classificatore Support Vector Machine (SVM) per predire l'orientamento politico dei tweet.
 
-Feature utilizzate:
+Feature selezionabili:
 - testo del tweet;
 - hashtag;
 - descrizione dell'utente.
@@ -125,7 +145,7 @@ Output del classificatore:
 
 LABELING AUTOMATICO DEL DATASET
 
-Poiché il dataset originale non contiene informazioni sull'orientamento politico dei tweet, è stata introdotta una fase preliminare di labeling automatico mediante il Large Language Model Gemma3-27b.
+Poiche' il dataset originale non contiene informazioni sull'orientamento politico dei tweet, e' stata introdotta una fase preliminare di labeling automatico mediante Large Language Model locale tramite Ollama.
 
 Per ogni tweet il modello locale riceve in input:
 - il testo del tweet;
@@ -133,14 +153,14 @@ Per ogni tweet il modello locale riceve in input:
 - un prompt progettato per classificare l'orientamento politico.
 
 L'LLM assegna:
-- 1 → Tweet PRO_TRUMP
-- 0 → Tweet PRO_HARRIS
+- 1 -> Tweet PRO_TRUMP
+- 0 -> Tweet PRO_HARRIS
 
 Nel caso in cui il tweet:
 - sia neutrale;
 - contenga informazioni insufficienti;
 - oppure non esprima chiaramente un orientamento politico,
 
-il modello non assegna alcuna etichetta (caso di fallback) e il tweet viene escluso dal training supervisionato.
+il modello non assegna alcuna etichetta e il tweet viene escluso dal training supervisionato.
 
-Questo approccio consente di costruire automaticamente un dataset etichettato di elevata qualità evitando una lunga fase di annotazione manuale.
+Questo approccio consente di costruire automaticamente un dataset etichettato evitando una lunga fase di annotazione manuale.

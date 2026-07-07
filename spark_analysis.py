@@ -202,6 +202,19 @@ def add_tokens(df):
     return remover.transform(tokenizer.transform(df))
 
 
+def extract_hashtags(df):
+    cleaned = F.regexp_replace(F.lower(F.col("hashtags")), r"[\[\]'\"{}]", " ")
+    return (
+        df.withColumn("hashtag", F.explode(F.split(cleaned, r"[,;\s]+")))
+        .withColumn("hashtag", F.trim("hashtag"))
+        .filter(F.length("hashtag") > 1)
+        .withColumn(
+            "hashtag",
+            F.when(F.col("hashtag").startswith("#"), F.col("hashtag")).otherwise(F.concat(F.lit("#"), F.col("hashtag"))),
+        )
+    )
+
+
 # Query 1 - Distribuzione geografica dei tweet.
 # Conta i tweet e gli utenti unici per ogni coppia stato/citta', ordinando le aree
 # con maggiore volume di discussione politica.
@@ -238,14 +251,7 @@ def temporal_evolution(df, output_dir: str) -> None:
 # Estrae gli hashtag dalla colonna dedicata, li normalizza e restituisce quelli
 # piu' frequenti nella conversazione.
 def top_hashtags(df, output_dir: str, top_n: int) -> None:
-    cleaned = F.regexp_replace(F.lower(F.col("hashtags")), r"[\[\]'\"{}]", " ")
-    tags = (
-        df.withColumn("hashtag", F.explode(F.split(cleaned, r"[,;\s]+")))
-        .withColumn("hashtag", F.trim("hashtag"))
-        .filter(F.length("hashtag") > 1)
-        .withColumn("hashtag", F.when(F.col("hashtag").startswith("#"), F.col("hashtag")).otherwise(F.concat(F.lit("#"), F.col("hashtag"))))
-    )
-
+    tags = extract_hashtags(df)
     result = tags.groupBy("hashtag").count().orderBy(F.desc("count"), "hashtag").limit(top_n)
     write_csv(result, output_dir, "query_03_top_hashtags", "top_hashtags")
 
@@ -265,7 +271,40 @@ def frequent_words(tokenized_df, output_dir: str, top_n: int) -> None:
     write_csv(result, output_dir, "query_04_frequent_words", "frequent_words")
 
 
-# Query 5 - Confronto Trump/Harris tramite keyword.
+# Query 5 - Hashtag distintivi per orientamento politico.
+# Confronta la frequenza degli hashtag nei tweet pro-Trump e pro-Harris,
+# calcolando uno score di sbilanciamento tra -1 e +1.
+def distinctive_hashtags(df, output_dir: str, min_count: int, top_n: int) -> None:
+    classified_tags = extract_hashtags(df.filter(F.col("binary_label").isin(0, 1)))
+
+    result = (
+        classified_tags.groupBy("hashtag")
+        .agg(
+            F.count("*").alias("total_count"),
+            F.sum(F.when(F.col("binary_label") == 1, 1).otherwise(0)).alias("pro_trump_count"),
+            F.sum(F.when(F.col("binary_label") == 0, 1).otherwise(0)).alias("pro_harris_count"),
+        )
+        .filter(F.col("total_count") >= min_count)
+        .withColumn("pro_trump_share", F.round(F.col("pro_trump_count") / F.col("total_count"), 4))
+        .withColumn("pro_harris_share", F.round(F.col("pro_harris_count") / F.col("total_count"), 4))
+        .withColumn(
+            "orientation_score",
+            F.round((F.col("pro_trump_count") - F.col("pro_harris_count")) / F.col("total_count"), 4),
+        )
+        .withColumn("distinctiveness_score", F.round(F.abs(F.col("orientation_score")), 4))
+        .withColumn(
+            "dominant_orientation",
+            F.when(F.col("orientation_score") > 0, "PRO_TRUMP")
+            .when(F.col("orientation_score") < 0, "PRO_HARRIS")
+            .otherwise("BALANCED"),
+        )
+        .orderBy(F.desc("distinctiveness_score"), F.desc("total_count"), "hashtag")
+        .limit(top_n)
+    )
+    write_csv(result, output_dir, "query_05_distinctive_hashtags", "distinctive_hashtags")
+
+
+# Query 6 - Confronto Trump/Harris tramite keyword.
 # Misura, per ogni stato, quante volte compaiono keyword associate a Trump e
 # Harris, distinguendo menzioni singole e menzioni di entrambi i candidati.
 def trump_harris_keyword_comparison(df, output_dir: str) -> None:
@@ -298,10 +337,10 @@ def trump_harris_keyword_comparison(df, output_dir: str) -> None:
         .withColumn("harris_share", F.round(F.col("harris_mentions") / F.col("tweet_count"), 4))
         .orderBy("state")
     )
-    write_csv(result, output_dir, "query_05_trump_harris_keyword_comparison", "trump_harris_keyword_comparison")
+    write_csv(result, output_dir, "query_06_trump_harris_keyword_comparison", "trump_harris_keyword_comparison")
 
 
-# Query 6 - Co-occorrenza delle parole.
+# Query 7 - Co-occorrenza delle parole.
 # Costruisce coppie di parole frequenti che appaiono nello stesso tweet, utile
 # per capire quali concetti vengono associati piu' spesso nella conversazione.
 def word_cooccurrence(tokenized_df, output_dir: str, top_n_words: int, top_n_pairs: int) -> None:
@@ -330,10 +369,10 @@ def word_cooccurrence(tokenized_df, output_dir: str, top_n_words: int, top_n_pai
         .orderBy(F.desc("count"), "word_a", "word_b")
         .limit(top_n_pairs)
     )
-    write_csv(pairs, output_dir, "query_06_word_cooccurrence", "word_cooccurrence")
+    write_csv(pairs, output_dir, "query_07_word_cooccurrence", "word_cooccurrence")
 
 
-# Query 7 - Polarizzazione territoriale degli utenti.
+# Query 8 - Polarizzazione territoriale degli utenti.
 # Prima assegna a ogni utente un orientamento prevalente nella citta' in cui ha
 # twittato, poi misura lo sbilanciamento tra utenti pro-Trump e pro-Harris.
 def territorial_polarization(df, output_dir: str, min_city_users: int) -> None:
@@ -381,10 +420,10 @@ def territorial_polarization(df, output_dir: str, min_city_users: int) -> None:
         )
         .orderBy(F.desc("user_polarization_score"), F.desc("classified_users"))
     )
-    write_csv(result, output_dir, "query_07_territorial_polarization", "territorial_polarization")
+    write_csv(result, output_dir, "query_08_territorial_polarization", "territorial_polarization")
 
 
-# Query 8 - K-Means clustering automatico dei tweet.
+# Query 9 - K-Means clustering automatico dei tweet.
 # Trasforma testo e hashtag in feature TF-IDF normalizzate e raggruppa i tweet
 # in cluster tematici non supervisionati. Il CountVectorizer ignora termini
 # troppo rari per evitare cluster quasi vuoti formati da outlier. Le descrizioni
@@ -425,7 +464,7 @@ def kmeans_clustering(df, output_dir: str, k: int) -> None:
         .withColumn("pro_harris_share", F.round(F.col("pro_harris") / F.col("tweet_count"), 4))
         .orderBy("cluster")
     )
-    write_csv(cluster_summary, output_dir, "query_08_kmeans_clustering", "cluster_summary")
+    write_csv(cluster_summary, output_dir, "query_09_kmeans_clustering", "cluster_summary")
 
     cluster_terms = (
         clustered.select("cluster", F.explode("ml_words").alias("word"))
@@ -436,10 +475,10 @@ def kmeans_clustering(df, output_dir: str, k: int) -> None:
         .filter(F.col("rank") <= 15)
         .orderBy("cluster", "rank")
     )
-    write_csv(cluster_terms, output_dir, "query_08_kmeans_clustering", "top_terms")
+    write_csv(cluster_terms, output_dir, "query_09_kmeans_clustering", "top_terms")
 
 
-# Query 9 - SVM per classificazione dell'orientamento politico.
+# Query 10 - SVM per classificazione dell'orientamento politico.
 # Addestra una Linear SVM binaria sui tweet etichettati dall'LLM, escludendo i
 # neutrali/ambigui, e salva metriche e matrice di confusione.
 def svm_classification(df, output_dir: str, feature_columns: list[str]) -> None:
@@ -491,8 +530,8 @@ def svm_classification(df, output_dir: str, feature_columns: list[str]) -> None:
         .orderBy("label", "prediction")
     )
 
-    write_csv(metrics_df, output_dir, "query_09_svm_classification", "metrics")
-    write_csv(confusion, output_dir, "query_09_svm_classification", "confusion_matrix")
+    write_csv(metrics_df, output_dir, "query_10_svm_classification", "metrics")
+    write_csv(confusion, output_dir, "query_10_svm_classification", "confusion_matrix")
 
 
 def parse_args() -> argparse.Namespace:
@@ -508,12 +547,18 @@ def parse_args() -> argparse.Namespace:
         "--queries",
         nargs="+",
         type=int,
-        choices=range(1, 10),
+        choices=range(1, 11),
         metavar="N",
-        default=list(range(1, 10)),
-        help="Query da eseguire, da 1 a 9. Esempio: --queries 1 oppure --queries 1 2 7.",
+        default=list(range(1, 11)),
+        help="Query da eseguire, da 1 a 10. Esempio: --queries 1 oppure --queries 1 2 8.",
     )
     parser.add_argument("--top-n", type=int, default=100, help="Numero di righe per ranking hashtag/parole.")
+    parser.add_argument(
+        "--min-hashtag-count",
+        type=int,
+        default=20,
+        help="Frequenza minima per includere un hashtag nella query degli hashtag distintivi.",
+    )
     parser.add_argument("--cooccurrence-words", type=int, default=50, help="Numero di parole usate per le co-occorrenze.")
     parser.add_argument("--cooccurrence-pairs", type=int, default=100, help="Numero di coppie di co-occorrenza salvate.")
     parser.add_argument(
@@ -550,10 +595,10 @@ def main() -> None:
 
     selected_queries = set(args.queries)
     tweets = load_tweets(spark, args.input, args.multiline_csv)
-    if len(selected_queries) > 1 or not selected_queries.issubset({1, 2, 3, 5, 7}):
+    if len(selected_queries) > 1 or not selected_queries.issubset({1, 2, 3, 5, 6, 8}):
         print("[cache] Cache dataset tweet attivata", flush=True)
         tweets = tweets.cache()
-    tokenized = add_tokens(tweets).cache() if selected_queries.intersection({4, 6}) else None
+    tokenized = add_tokens(tweets).cache() if selected_queries.intersection({4, 7}) else None
 
     if 1 in selected_queries:
         run_query(1, "Distribuzione geografica", lambda: geographic_distribution(tweets, args.output))
@@ -564,15 +609,21 @@ def main() -> None:
     if 4 in selected_queries:
         run_query(4, "Parole frequenti", lambda: frequent_words(tokenized, args.output, args.top_n))
     if 5 in selected_queries:
-        run_query(5, "Confronto keyword Trump/Harris", lambda: trump_harris_keyword_comparison(tweets, args.output))
+        run_query(
+            5,
+            "Hashtag distintivi per orientamento",
+            lambda: distinctive_hashtags(tweets, args.output, args.min_hashtag_count, args.top_n),
+        )
     if 6 in selected_queries:
-        run_query(6, "Co-occorrenza parole", lambda: word_cooccurrence(tokenized, args.output, args.cooccurrence_words, args.cooccurrence_pairs))
+        run_query(6, "Confronto keyword Trump/Harris", lambda: trump_harris_keyword_comparison(tweets, args.output))
     if 7 in selected_queries:
-        run_query(7, "Polarizzazione territoriale", lambda: territorial_polarization(tweets, args.output, args.min_city_users))
+        run_query(7, "Co-occorrenza parole", lambda: word_cooccurrence(tokenized, args.output, args.cooccurrence_words, args.cooccurrence_pairs))
     if 8 in selected_queries:
-        run_query(8, "K-Means", lambda: kmeans_clustering(tweets, args.output, args.k))
+        run_query(8, "Polarizzazione territoriale", lambda: territorial_polarization(tweets, args.output, args.min_city_users))
     if 9 in selected_queries:
-        run_query(9, "SVM", lambda: svm_classification(tweets, args.output, args.svm_features))
+        run_query(9, "K-Means", lambda: kmeans_clustering(tweets, args.output, args.k))
+    if 10 in selected_queries:
+        run_query(10, "SVM", lambda: svm_classification(tweets, args.output, args.svm_features))
 
     print("[spark] Stop sessione Spark", flush=True)
     spark.stop()
